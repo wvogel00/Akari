@@ -1,0 +1,80 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 8284bf3fcb282b5666c630d56d7cec3beca4d926d1ac714e56baf0f31e8b1db6
+
+name:           Akari
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/Akari#readme>
+homepage:       https://github.com/githubuser/Akari#readme
+bug-reports:    https://github.com/githubuser/Akari/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2020 Author name here
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/Akari
+
+library
+  exposed-modules:
+      Lib
+  other-modules:
+      Paths_Akari
+  hs-source-dirs:
+      src
+  build-depends:
+      aeson
+    , authenticate-oauth
+    , base >=4.7 && <5
+    , bytestring
+    , http-conduit
+    , http-types
+    , text
+  default-language: Haskell2010
+
+executable Akari-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_Akari
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      Akari
+    , aeson
+    , authenticate-oauth
+    , base >=4.7 && <5
+    , bytestring
+    , http-conduit
+    , http-types
+    , text
+  default-language: Haskell2010
+
+test-suite Akari-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_Akari
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      Akari
+    , aeson
+    , authenticate-oauth
+    , base >=4.7 && <5
+    , bytestring
+    , http-conduit
+    , http-types
+    , text
+  default-language: Haskell2010
