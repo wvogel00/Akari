@@ -27,6 +27,7 @@ dependencies:
 - text
 - aeson
 - bytestring
+- time
 
 library:
   source-dirs: src

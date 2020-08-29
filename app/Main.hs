@@ -6,4 +6,6 @@ import Lib
 import Data.Text
 
 main :: IO ()
-main = tweet "あかりからのテスト投稿"
+main = do
+    tweet $ Tweet {text = "あかりからのテスト投稿"}
+    -- autoTweet Nothing
