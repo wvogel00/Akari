@@ -18,6 +18,7 @@ import Network.HTTP.Types.Status (statusCode)
 import Data.Time.LocalTime hiding (Day)
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import Control.Concurrent (threadDelay)
+import qualified Akari.Yaml as A
 
 data Tweet = Tweet
     { text :: Text
@@ -82,7 +83,7 @@ getTimeInfo t = (read m,read d,read h) :: TimeInfo where
 
 autoTweet :: Maybe TimeInfo -> IO ()
 autoTweet Nothing = do
-    tweet $ Tweet {text = "自動投稿を開始します"}
+    -- tweet $ Tweet {text = "自動投稿を開始します"}
     now <- getJSTTime
     autoTweet =<< Just <$> getJSTTime
 autoTweet (Just old) = do
@@ -90,12 +91,12 @@ autoTweet (Just old) = do
     if isDayTime now && now `diff` old >= 2 -- && odd (hour now)
             then do
                 let state = stateAt now
-                tweet $ Tweet {text=tweetAt state, img = imageAt state }
-                -- putStr "now -> " >> print now
+                -- tweet $ Tweet {text=tweetAt state, img = imageAt state }
+                putStr "now -> " >> print now
                 autoTweet (Just now)
             else do
                 threadDelay $ 10 * 10^6 -- micro sec. 10sec毎に実行
-                -- putStr "old -> " >> print old
+                putStr "old -> " >> print old
                 autoTweet (Just old)
 
 getMyOauth = do

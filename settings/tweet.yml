@@ -1,0 +1,16 @@
+tweet:
+  - from : 2020-8-31
+    to   : 2020-9-1
+    stopfrom : 21:00
+    stopto   : 6:00
+    span     : 3h
+    contents : 今日はいい天気だなあ
+    media    : image/logo.png
+    
+  - from : 2020-8-31
+    to   : 2020-9-1
+    stopfrom : 21:00
+    stopto   : 6:00
+    span     : 3h
+    contents : 今日はいい天気だなあ
+    media    : image/logo.png

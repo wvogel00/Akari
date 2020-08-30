@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e5f3b442dc5bace996d0fb876ce74c9444ae27c6dccbb87903c4d0fc30c7d11d
+-- hash: 7b4e8cd78f9bbc38514b8769a390c3a543c7ce374ba872d32b810ec3f91e754d
 
 name:           Akari
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 
 library
   exposed-modules:
+      Akari.Yaml
       Lib
   other-modules:
       Paths_Akari
@@ -43,6 +44,7 @@ library
     , lens-aeson
     , text
     , time
+    , yaml
   default-language: Haskell2010
 
 executable Akari-exe
@@ -64,6 +66,7 @@ executable Akari-exe
     , lens-aeson
     , text
     , time
+    , yaml
   default-language: Haskell2010
 
 test-suite Akari-test
@@ -86,4 +89,5 @@ test-suite Akari-test
     , lens-aeson
     , text
     , time
+    , yaml
   default-language: Haskell2010

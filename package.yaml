@@ -30,6 +30,7 @@ dependencies:
 - bytestring
 - base64-bytestring
 - time
+- yaml
 
 library:
   source-dirs: src
