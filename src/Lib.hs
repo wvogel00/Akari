@@ -55,8 +55,8 @@ tweetAt state = case state of
 
 imageAt state = case state of
     Nominal     -> Nothing
-    OpeStart    -> Just "image/onope.jpg"
-    OnOpe       -> Just "image/onope.jpg"
+    OpeStart    -> Just "image/abstract.png"
+    OnOpe       -> Just "image/onope.png"
     ICU         -> Just "image/icu.png"
     SoCritical  -> Nothing
     Critical    -> Nothing

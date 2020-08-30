@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 19e96333a786d47880cbd0514ae9c24f28e40f4b065433eb07dc27f019cb74c8
+-- hash: e5f3b442dc5bace996d0fb876ce74c9444ae27c6dccbb87903c4d0fc30c7d11d
 
 name:           Akari
 version:        0.1.0.0
@@ -33,8 +33,7 @@ library
   hs-source-dirs:
       src
   build-depends:
-      aeson
-    , authenticate-oauth
+      authenticate-oauth
     , base >=4.7 && <5
     , base64-bytestring
     , bytestring
@@ -55,7 +54,6 @@ executable Akari-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       Akari
-    , aeson
     , authenticate-oauth
     , base >=4.7 && <5
     , base64-bytestring
@@ -78,7 +76,6 @@ test-suite Akari-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       Akari
-    , aeson
     , authenticate-oauth
     , base >=4.7 && <5
     , base64-bytestring
