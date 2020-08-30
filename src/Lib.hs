@@ -37,8 +37,8 @@ data State = OpeStart | OnOpe | ICU | SoCritical | Critical | UnKnown | Nominal
     deriving (Eq,Show)
 
 hour (_,_,h) = h
-diff (8,d1,h1) (9,d2,h2) = h2-h1+24
-diff (_,d1,h1) (_,d2,h2) = (d2-d1)*24 + h2-h1
+diff (8,d1,h1) (9,d2,h2) = h1-h2+24
+diff (_,d1,h1) (_,d2,h2) = (d1-d2)*24 + h1-h2
 
 isDayTime (_,_,h) = 7 <= h && h <= 19
 
