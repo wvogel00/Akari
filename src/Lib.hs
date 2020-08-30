@@ -37,7 +37,7 @@ data State = OpeStart | OnOpe | ICU | SoCritical | Critical | UnKnown | Nominal
     deriving (Eq,Show)
 
 hour (_,_,h) = h
-diff (8,d1,h1) (9,d2,h2) = h1-h2+24
+diff (9,d1,h1) (8,d2,h2) = h1-h2+24
 diff (_,d1,h1) (_,d2,h2) = (d1-d2)*24 + h1-h2
 
 isDayTime (_,_,h) = 7 <= h && h <= 19
@@ -82,21 +82,20 @@ getTimeInfo t = (read m,read d,read h) :: TimeInfo where
 
 autoTweet :: Maybe TimeInfo -> IO ()
 autoTweet Nothing = do
-    -- tweet $ Tweet {text = "自動投稿を開始します"}
-    putStrLn "test"
+    tweet $ Tweet {text = "自動投稿を開始します"}
     now <- getJSTTime
     autoTweet =<< Just <$> getJSTTime
 autoTweet (Just old) = do
     now <- getJSTTime
-    if isDayTime now && now `diff` old >= 2 && odd (hour now)
+    if isDayTime now && now `diff` old >= 2 -- && odd (hour now)
             then do
                 let state = stateAt now
-                -- tweet $ Tweet {text=tweetAt state, img = imageAt state }
-                print now
+                tweet $ Tweet {text=tweetAt state, img = imageAt state }
+                -- putStr "now -> " >> print now
                 autoTweet (Just now)
             else do
                 threadDelay $ 10 * 10^6 -- micro sec. 10sec毎に実行
-                print now
+                -- putStr "old -> " >> print old
                 autoTweet (Just old)
 
 getMyOauth = do
