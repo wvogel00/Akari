@@ -33,25 +33,25 @@ type Month = Int
 type Day = Int
 type Hour = Int
 
-data State = OpeStart | OnOpe | ICU | SoCritical | Critical | UnKnown | Nominal deriving Eq
+data State = OpeStart | OnOpe | ICU | SoCritical | Critical | UnKnown | Nominal
+    deriving (Eq,Show)
 
 hour (_,_,h) = h
-diff (8,d1,h1) (8,d2,h2) = h2-h1
 diff (8,d1,h1) (9,d2,h2) = h2-h1+24
-diff (9,d1,h1) (9,d2,h2) = h2-h1
+diff (_,d1,h1) (_,d2,h2) = (d2-d1)*24 + h2-h1
 
 isDayTime (_,_,h) = 7 <= h && h <= 19
 
 signAkari = flip append "\n\n -Akariが投稿しています-"
 
 tweetAt state = case state of
-    Nominal     -> "Akariは待機中です！"
-    OpeStart    -> "手術開始です！"
-    OnOpe       -> "手術中です"
+    Nominal     -> "Akariは待機中です！Akariは日中，二時間に一回，主人の様子をお伝えします．"
+    OpeStart    -> "手術開始です！手術成功しなくても良いから無事に戻ってきますように！"
+    OnOpe       -> "手術中です...そわそわ"
     ICU         -> "ICUにいます"
-    SoCritical  -> "多分ICUにいます"
+    SoCritical  -> "多分ICUにいます..重症室へ移動したのでしょうか"
     Critical    -> "ICUか重症室にいます...多分..."
-    UnKnown     -> "Akariには主人の居場所がわかりません！"
+    UnKnown     -> "Akariには主人の居場所がわかりません！ピンチです！"
 
 imageAt state = case state of
     Nominal     -> Nothing
@@ -96,6 +96,7 @@ autoTweet (Just old) = do
                 autoTweet (Just now)
             else do
                 threadDelay $ 10 * 10^6 -- micro sec. 10sec毎に実行
+                print now
                 autoTweet (Just old)
 
 getMyOauth = do
