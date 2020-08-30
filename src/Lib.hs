@@ -7,8 +7,10 @@ import Data.Text hiding (words)
 import Data.Text.Encoding
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Base64 as B64 (encode)
 import Data.Maybe
-import Data.Aeson
+import Control.Lens
+import Data.Aeson.Lens
 import GHC.Generics
 import Network.HTTP.Conduit
 import Web.Authenticate.OAuth
@@ -17,12 +19,10 @@ import Data.Time.LocalTime hiding (Day)
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import Control.Concurrent (threadDelay)
 
-newtype Tweet = Tweet
+data Tweet = Tweet
     { text :: Text
+    , img :: Maybe Text
     } deriving (Show, Generic)
-
-instance FromJSON Tweet
-instance ToJSON Tweet
 
 appName = "AkariApp"
 
@@ -33,23 +33,44 @@ type Month = Int
 type Day = Int
 type Hour = Int
 
+data State = OpeStart | OnOpe | ICU | SoCritical | Critical | UnKnown | Nominal deriving Eq
+
 hour (_,_,h) = h
 diff (8,d1,h1) (8,d2,h2) = h2-h1
 diff (8,d1,h1) (9,d2,h2) = h2-h1+24
 diff (9,d1,h1) (9,d2,h2) = h2-h1
 
-isDayTime (_,_,h) = 9 <= h && h <= 19
+isDayTime (_,_,h) = 7 <= h && h <= 19
 
-akariSign = "\n\n -Akariからの自動投稿です-"
+signAkari = flip append "\n\n -Akariが投稿しています-"
 
-tweetAt (m,d,h)
-    | (m,d) == (8,31) && h == 9 = append "手術開始です！" akariSign
-    | (m,d) == (8,31) && h < 18 = append "手術中です" akariSign
-    | (m,d) == (8,31) && otherwise = append "ICUにいます" akariSign
-    | m == 9 && d == 1 = append "ICUにいます" akariSign
-    | m == 9 && d == 2 && h <= 12 = append "多分ICUにいます" akariSign
-    | m == 9 = append "ICUか重症室にいます...多分..." akariSign
-    | otherwise = append "Akariには主人の居場所がわかりません！" akariSign
+tweetAt state = case state of
+    Nominal     -> "Akariは待機中です！"
+    OpeStart    -> "手術開始です！"
+    OnOpe       -> "手術中です"
+    ICU         -> "ICUにいます"
+    SoCritical  -> "多分ICUにいます"
+    Critical    -> "ICUか重症室にいます...多分..."
+    UnKnown     -> "Akariには主人の居場所がわかりません！"
+
+imageAt state = case state of
+    Nominal     -> Nothing
+    OpeStart    -> Just "image/onope.jpg"
+    OnOpe       -> Just "image/onope.jpg"
+    ICU         -> Just "image/icu.png"
+    SoCritical  -> Nothing
+    Critical    -> Nothing
+    UnKnown     -> Nothing
+
+stateAt (m,d,h)
+    | (m,d)==(8,30) || (m == 8 && d == 31 && h <= 8) = Nominal
+    | (m,d) == (8,31) && h == 9 = OpeStart
+    | (m,d) == (8,31) && h < 18 = OnOpe
+    | (m,d) == (8,31) && otherwise = ICU
+    | m == 9 && d == 1 = ICU
+    | m == 9 && d == 2 && h <= 12 = SoCritical
+    | m == 9 = Critical
+    | otherwise = UnKnown
 
 getJSTTime :: IO TimeInfo
 getJSTTime = getTimeInfo <$> getZonedTime
@@ -69,16 +90,16 @@ autoTweet (Just old) = do
     now <- getJSTTime
     if isDayTime now && now `diff` old >= 2 && odd (hour now)
             then do
-                -- tweet $ Tweet {text=tweetAt now}
-                putStrLn "test"
+                let state = stateAt now
+                -- tweet $ Tweet {text=tweetAt state, img = imageAt state }
+                print now
                 autoTweet (Just now)
             else do
                 threadDelay $ 10 * 10^6 -- micro sec. 10sec毎に実行
                 autoTweet (Just old)
+
 getMyOauth = do
     [key,secret] <- BS.words <$> BS.readFile "info/oauth"
-    BS.putStrLn key
-    BS.putStrLn secret
     return $ newOAuth
         { oauthServerName = "api.twitter.com"
         , oauthConsumerKey = key
@@ -87,38 +108,35 @@ getMyOauth = do
 
 getMyCredential = do
     [token, secret_token] <- BS.words <$> BS.readFile "info/credential"
-    BS.putStrLn token
-    BS.putStrLn secret_token
     return $ newCredential token secret_token
 
 tweet :: Tweet -> IO ()
 tweet tw = do
     _oauth <- getMyOauth
     _credential <- getMyCredential
+    contents <- makeContents tw 
     req <- parseRequest "https://api.twitter.com/1.1/statuses/update.json"
     manager <- newManager tlsManagerSettings
     postReq <- signOAuth _oauth _credential $
-                urlEncodedBody [("status",encodeUtf8 $ text tw)] req
+                urlEncodedBody contents req
     res <- httpLbs postReq manager
-    putStrLn $ show $ statusCode $ responseStatus res
+    -- putStrLn $ show $ statusCode $ responseStatus res
     return ()
 
-makeContents tw img = do
-    case img of
-        Nothing -> return [("status",encodeUtf8 $ text tw)]
-        Just path -> do
-            ids <- upload $ path
-            return [("status",encodeUtf8 $ text tw), ("media_ids", ids)]
+makeContents tw = case img tw of
+    Nothing -> return [("status",encodeUtf8 . signAkari $ text tw)]
+    Just path -> do
+        ids <- upload $ unpack path
+        return [("status",encodeUtf8 . signAkari $ text tw), ("media_ids", encodeUtf8 ids)]
 
--- 画像をuploadし，"media_ids"フィールドの文字列を返す
-upload :: String -> IO B.ByteString
+-- 画像をuploadし，"media_id_strings"フィールドの文字列を返す
+upload :: String -> IO Text
 upload path = do
+    img <- B64.encode <$> B.readFile path
     _oauth <- getMyOauth
     _credential <- getMyCredential
-    req <- parseRequest "https://api.twitter.com/1.1/statuses/update.json"
+    req <- parseRequest "https://upload.twitter.com/1.1/media/upload.json"
     manager <- newManager tlsManagerSettings
-    postReq <- signOAuth _oauth _credential $
-                urlEncodedBody [("media","tet")] req
+    postReq <- signOAuth _oauth _credential $ urlEncodedBody [("media_data",img)] req
     res <- httpLbs postReq manager
-    putStrLn $ show $ statusCode $ responseStatus res
-    return "test"
+    return $ responseBody res ^. key "media_id_string" . _String

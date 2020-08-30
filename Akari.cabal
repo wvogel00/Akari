@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: bece9ab7d4f1111242a8a19c88337c5a4993906ea7549d1acd2f2a91b5aadc5b
+-- hash: 19e96333a786d47880cbd0514ae9c24f28e40f4b065433eb07dc27f019cb74c8
 
 name:           Akari
 version:        0.1.0.0
@@ -36,9 +36,12 @@ library
       aeson
     , authenticate-oauth
     , base >=4.7 && <5
+    , base64-bytestring
     , bytestring
     , http-conduit
     , http-types
+    , lens
+    , lens-aeson
     , text
     , time
   default-language: Haskell2010
@@ -55,9 +58,12 @@ executable Akari-exe
     , aeson
     , authenticate-oauth
     , base >=4.7 && <5
+    , base64-bytestring
     , bytestring
     , http-conduit
     , http-types
+    , lens
+    , lens-aeson
     , text
     , time
   default-language: Haskell2010
@@ -75,9 +81,12 @@ test-suite Akari-test
     , aeson
     , authenticate-oauth
     , base >=4.7 && <5
+    , base64-bytestring
     , bytestring
     , http-conduit
     , http-types
+    , lens
+    , lens-aeson
     , text
     , time
   default-language: Haskell2010
