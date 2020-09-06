@@ -88,7 +88,7 @@ autoTweet Nothing = do
     autoTweet =<< Just <$> getJSTTime
 autoTweet (Just old) = do
     now <- getJSTTime
-    if isDayTime now && now `diff` old >= 2 -- && odd (hour now)
+    if isDayTime now && now `diff` old >= 2 && odd (hour now)
             then do
                 let state = stateAt now
                 -- tweet $ Tweet {text=tweetAt state, img = imageAt state }
