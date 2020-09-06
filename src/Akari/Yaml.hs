@@ -23,9 +23,6 @@ data Tweet = Tweet
     , media :: Maybe T.Text
     } deriving (Show, Generic)
 
-instance FromJSON Reserved
---instance FromJSON Tweet
-
 data Date = Date
     { year :: Int
     , month :: Int
@@ -34,17 +31,17 @@ data Date = Date
     , minute :: Int
     } deriving (Show, Ord, Eq)
 
+instance FromJSON Reserved
+
 instance FromJSON Tweet where
-    parseJSON (Object o) = do
-        v <- o.: "stopto"
-        trace ("\n\n\n\n" ++  v) $
+    parseJSON (Object o) = 
             Tweet <$> (readDate <$> o .: "from")
                   <*> (readDate <$> o .: "to")
-                  <*> (o .: "stopfrom")
-                  <*> (o .: "stopto")
+                  <*> (o .:? "stopfrom")
+                  <*> (o .:? "stopto")
                   <*> (o .: "span")
                   <*> (o .: "contents")
-                  <*> (o .: "media")
+                  <*> (o .:? "media")
 
 readDate str = Date {year = y, month = m, day = d, hour = h, minute = mn}
     where
@@ -52,22 +49,32 @@ readDate str = Date {year = y, month = m, day = d, hour = h, minute = mn}
             then readDate' str
             else 0:0:readDate' str
         readDate' = map read . filter (not.null) . readDate'' ([],[])
-
-readDate'' :: (String, [String]) -> String -> [String]
-readDate'' (v,vs) [] = v:vs
-readDate'' (v,vs) (x:xs) = if elem x (":/-" :: String)
-    then readDate'' ([],v:vs) xs
-    else readDate'' (v++[x],vs) xs
+        readDate'' :: (String, [String]) -> String -> [String]
+        readDate'' (v,vs) [] = v:vs
+        readDate'' (v,vs) (x:xs) = if elem x (":/-" :: String)
+            then readDate'' ([],v:vs) xs
+            else readDate'' (v++[x],vs) xs
 
 readYaml :: IO (Maybe Reserved)
 readYaml = do
     cs <- BS.readFile "settings/tweet.yml"
-    let rs = decode cs :: Maybe Reserved
+    let rs = decodeEither' cs :: Either ParseException Reserved
     case rs of
-        Nothing -> BS.putStrLn "読み込みに失敗しました" $> Nothing
-        Just _ -> return rs
+        Left NonScalarKey -> putStrLn "数値がありません" $> Nothing
+        Left (UnknownAlias name) -> putStrLn ("不明なエイリアス" ++ name ++ "があります") $> Nothing
+        Left MultipleDocuments -> putStrLn "ファイルが複数あります" $> Nothing
+        Left (InvalidYaml _) -> putStrLn "yamlが不正です" $> Nothing
+        Left (UnexpectedEvent _ _) -> putStrLn ("予期せぬイベントがありました") $> Nothing
+        Left (AesonException str) -> putStrLn ("aeson例外です:" ++ str) $> Nothing
+        Left (OtherParseException _) -> putStrLn "パース例外が発生しました" $> Nothing
+        Left (NonStringKey jpath) -> putStrLn (show jpath ++ "がありません") $> Nothing
+        Left (NonStringKeyAlias name v) -> putStrLn ("キーエイリアス"++name++"がありません") $> Nothing
+        Left CyclicIncludes -> putStrLn "繰り返し設定されている値があります" $> Nothing
+        Left (LoadSettingsException path _) -> putStrLn (path ++ "がありません") $> Nothing
+        Right rs -> return $ Just rs
 
 length :: Reserved -> Int
 length (Reserved xs) = Prelude.length xs
 
 (!!) (Reserved rs) = (Prelude.!!) rs
+
