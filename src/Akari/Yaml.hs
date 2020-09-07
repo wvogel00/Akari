@@ -3,12 +3,23 @@
 
 module Akari.Yaml where
 
+import Akari.Time
 import GHC.Generics
 import qualified Data.Yaml as Y (Parser)
 import Data.Yaml
+    ( FromJSON(parseJSON),
+      (.:),
+      (.:?),
+      Value(Object),
+      decodeEither',
+      ParseException(LoadSettingsException, NonScalarKey, UnknownAlias,
+                     MultipleDocuments, InvalidYaml, UnexpectedEvent, AesonException,
+                     OtherParseException, NonStringKey, NonStringKeyAlias,
+                     CyclicIncludes) )
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as T
 import Data.Functor
+import Data.Maybe
 import Debug.Trace
 
 data Reserved = Reserved {tweet :: [Tweet]} deriving (Show, Generic)
@@ -16,63 +27,26 @@ data Reserved = Reserved {tweet :: [Tweet]} deriving (Show, Generic)
 data Tweet = Tweet 
     { from :: Date
     , to :: Date
-    , stopfrom :: Maybe String
-    , stopto :: Maybe String
-    , span :: String
+    , stopfrom :: Maybe Clock
+    , stopto :: Maybe Clock
+    , span :: Clock
     , contents :: T.Text
     , media :: Maybe T.Text
     } deriving (Show, Generic)
 
-data Date = Date
-    { year :: Int
-    , month :: Int
-    , day :: Int
-    , hour :: Int
-    , minute :: Int
-    } deriving (Ord, Eq)
-
 instance FromJSON Reserved
-
-dayCount m
-    | elem m [1,3,5,7,8,10,12] = 31
-    | elem m [4,6,9,11] = 30
-    | m == 2 = 28
-
-instance Show Date where
-    show d = (show $ year d) ++ "-" ++ (show $ month d) ++ "-" ++ (show $ day d)
-                ++ "/" ++ (show $ hour d) ++ ":" ++ (show $ minute d)
-
-instance Num Date where
-    a + b = undefined
-    a * b = undefined
-    negate = undefined
-    abs a = a
-    signum = undefined
-    fromInteger = undefined
-    a - b = Date { year = year'
-                 , month = 12*year' + month'
-                 , day = day'
-                 , hour = hour' `mod` 24
-                 , minute = minute' `mod` 60
-                 } where
-                     minute' = minute a - minute b
-                     hour' = if minute' < 0 then hour a - hour b - 1 else hour a - hour b
-                     year' = year a - year b
-                     day' = if month a > month b then day a - day b + dayCount (month b) else day a - day b
-                     month' = if day a < day b then month a - month b - 1 else month a - month b
-
 
 instance FromJSON Tweet where
     parseJSON (Object o) = 
             Tweet <$> (readDate <$> o .: "from")
                   <*> (readDate <$> o .: "to")
-                  <*> (o .:? "stopfrom")
-                  <*> (o .:? "stopto")
-                  <*> (o .: "span")
+                  <*> (readClock <$> o .:? "stopfrom")
+                  <*> (readClock <$> o .:? "stopto")
+                  <*> (fromJust . readClock . Just <$> o .: "span")
                   <*> (o .: "contents")
                   <*> (o .:? "media")
 
-readDate str = Date {year = y, month = m, day = d, hour = h, minute = mn}
+readDate str = Date y m d $ Clock h mn
     where
         [mn,h,d,m,y] = if elem '/' str
             then readDate' str
@@ -83,6 +57,14 @@ readDate str = Date {year = y, month = m, day = d, hour = h, minute = mn}
         readDate'' (v,vs) (x:xs) = if elem x (":/-" :: String)
             then readDate'' ([],v:vs) xs
             else readDate'' (v++[x],vs) xs
+
+readClock Nothing = Nothing
+readClock (Just str) = Just $ Clock h m
+    where
+        (h,m) = split ':' str
+        split c = split' c ""
+        split' c xs [] = (read xs,0)
+        split' c xs (y:ys) = if c == y then (read xs,read ys) else split' c (xs++[y]) ys
 
 readYaml :: FilePath -> IO (Maybe Reserved)
 readYaml file = do

@@ -27,15 +27,10 @@ data Tweet = Tweet
 
 appName = "AkariApp"
 
-logoPath = "image/logo.png"
-
 type TimeInfo = (Month, Day, Hour)
 type Month = Int
 type Day = Int
 type Hour = Int
-
-data State = OpeStart | OnOpe | ICU | SoCritical | Critical | UnKnown | Nominal
-    deriving (Eq,Show)
 
 hour (_,_,h) = h
 diff (9,d1,h1) (8,d2,h2) = h1-h2+24
@@ -43,35 +38,11 @@ diff (_,d1,h1) (_,d2,h2) = (d1-d2)*24 + h1-h2
 
 isDayTime (_,_,h) = 7 <= h && h <= 19
 
+inOnTime :: A.Date -> A.Tweet -> Bool
+inOnTIme d tw = A.from tw < d && d < A.to tw
+
 signAkari = flip append "\n\n -Akariが投稿しています-"
 
-tweetAt state = case state of
-    Nominal     -> "Akariは待機中です！Akariは日中，二時間に一回，主人の様子をお伝えします．"
-    OpeStart    -> "手術開始です！手術成功しなくても良いから無事に戻ってきますように！"
-    OnOpe       -> "手術中です...そわそわ"
-    ICU         -> "ICUにいます"
-    SoCritical  -> "多分ICUにいます..重症室へ移動したのでしょうか"
-    Critical    -> "ICUか重症室にいます...多分..."
-    UnKnown     -> "Akariには主人の居場所がわかりません！ピンチです！"
-
-imageAt state = case state of
-    Nominal     -> Nothing
-    OpeStart    -> Just "image/abstract.png"
-    OnOpe       -> Just "image/onope.png"
-    ICU         -> Just "image/icu.png"
-    SoCritical  -> Nothing
-    Critical    -> Nothing
-    UnKnown     -> Nothing
-
-stateAt (m,d,h)
-    | (m,d)==(8,30) || (m == 8 && d == 31 && h <= 8) = Nominal
-    | (m,d) == (8,31) && h == 9 = OpeStart
-    | (m,d) == (8,31) && h < 18 = OnOpe
-    | (m,d) == (8,31) && otherwise = ICU
-    | m == 9 && d == 1 = ICU
-    | m == 9 && d == 2 && h <= 12 = SoCritical
-    | m == 9 = Critical
-    | otherwise = UnKnown
 
 getJSTTime :: IO TimeInfo
 getJSTTime = getTimeInfo <$> getZonedTime
@@ -80,6 +51,20 @@ getTimeInfo t = (read m,read d,read h) :: TimeInfo where
     m = formatTime defaultTimeLocale "%m" t
     d = formatTime defaultTimeLocale "%d" t
     h = formatTime defaultTimeLocale "%H" t
+
+autoTweetYml :: FilePath -> IO ()
+autoTweetYml ymlfile = do
+    yml <- A.readYaml "settings/tweet.yml"
+    case yml of
+        Nothing -> putStrLn $ ymlfile ++ "が存在しないため実行できません"
+        Just rs -> do
+            putStrLn $ show (length $ tweet rs) ++ "件の予約を並列実行します"
+            mapM_ tweetReserved $ tweet rs
+
+tweetReserved :: A.Tweet -> IO()
+tweetReserved tw = do
+    threadDelay $ 60 * 10^6 -- 60secおき
+    autoTweetYml
 
 autoTweet :: Maybe TimeInfo -> IO ()
 autoTweet Nothing = do
