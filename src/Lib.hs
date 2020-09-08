@@ -3,7 +3,7 @@
 
 module Lib where
 
-import Data.Text hiding (words)
+import Data.Text hiding (words, length)
 import Data.Text.Encoding
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString as B
@@ -19,6 +19,7 @@ import Data.Time.LocalTime hiding (Day)
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import Control.Concurrent (threadDelay)
 import qualified Akari.Yaml as A
+import qualified Akari.Time as AT
 
 data Tweet = Tweet
     { text :: Text
@@ -26,31 +27,25 @@ data Tweet = Tweet
     } deriving (Show, Generic)
 
 appName = "AkariApp"
-
-type TimeInfo = (Month, Day, Hour)
-type Month = Int
-type Day = Int
-type Hour = Int
-
-hour (_,_,h) = h
-diff (9,d1,h1) (8,d2,h2) = h1-h2+24
-diff (_,d1,h1) (_,d2,h2) = (d1-d2)*24 + h1-h2
-
 isDayTime (_,_,h) = 7 <= h && h <= 19
 
-inOnTime :: A.Date -> A.Tweet -> Bool
-inOnTIme d tw = A.from tw < d && d < A.to tw
+isAbleToTweet :: AT.Date -> AT.Date -> A.Tweet -> Bool
+isAbleToTweet old now tw = A.from tw < now
+                        && now < A.to tw
+                        && A.span tw < AT.clock (now-old)
 
 signAkari = flip append "\n\n -Akariが投稿しています-"
 
 
-getJSTTime :: IO TimeInfo
+getJSTTime :: IO AT.Date
 getJSTTime = getTimeInfo <$> getZonedTime
 
-getTimeInfo t = (read m,read d,read h) :: TimeInfo where
-    m = formatTime defaultTimeLocale "%m" t
-    d = formatTime defaultTimeLocale "%d" t
-    h = formatTime defaultTimeLocale "%H" t
+getTimeInfo t = AT.Date y m d (AT.Clock h mn) where
+    y = read $ formatTime defaultTimeLocale "%Y" t
+    m = read $ formatTime defaultTimeLocale "%m" t
+    d = read $ formatTime defaultTimeLocale "%d" t
+    h = read $ formatTime defaultTimeLocale "%H" t
+    mn = read $ formatTime defaultTimeLocale "%M" t
 
 autoTweetYml :: FilePath -> IO ()
 autoTweetYml ymlfile = do
@@ -58,31 +53,24 @@ autoTweetYml ymlfile = do
     case yml of
         Nothing -> putStrLn $ ymlfile ++ "が存在しないため実行できません"
         Just rs -> do
-            putStrLn $ show (length $ tweet rs) ++ "件の予約を並列実行します"
-            mapM_ tweetReserved $ tweet rs
+            putStrLn $ show (length $ A.tweet rs) ++ "件の予約を並列実行します"
+            mapM_ tweetReserved $ A.tweet rs
 
 tweetReserved :: A.Tweet -> IO()
 tweetReserved tw = do
-    threadDelay $ 60 * 10^6 -- 60secおき
-    autoTweetYml
+    now <- getJSTTime
+    tweetReserved' now tw
 
-autoTweet :: Maybe TimeInfo -> IO ()
-autoTweet Nothing = do
-    -- tweet $ Tweet {text = "自動投稿を開始します"}
+tweetReserved' :: AT.Date -> A.Tweet -> IO ()
+tweetReserved' old tw = do
     now <- getJSTTime
-    autoTweet =<< Just <$> getJSTTime
-autoTweet (Just old) = do
-    now <- getJSTTime
-    if isDayTime now && now `diff` old >= 2 && odd (hour now)
-            then do
-                let state = stateAt now
-                -- tweet $ Tweet {text=tweetAt state, img = imageAt state }
-                putStr "now -> " >> print now
-                autoTweet (Just now)
-            else do
-                threadDelay $ 10 * 10^6 -- micro sec. 10sec毎に実行
-                putStr "old -> " >> print old
-                autoTweet (Just old)
+    if isAbleToTweet old now tw
+        then do
+            tweet (A.contents tw) (A.media tw)
+            tweetReserved' now tw
+        else do
+            threadDelay $ 60 * 10^6 -- 1 minute
+            tweetReserved' old tw
 
 getMyOauth = do
     [key,secret] <- BS.words <$> BS.readFile "info/oauth"
@@ -96,11 +84,11 @@ getMyCredential = do
     [token, secret_token] <- BS.words <$> BS.readFile "info/credential"
     return $ newCredential token secret_token
 
-tweet :: Tweet -> IO ()
-tweet tw = do
+tweet :: Text -> Maybe Text -> IO ()
+tweet t file = do
     _oauth <- getMyOauth
     _credential <- getMyCredential
-    contents <- makeContents tw 
+    contents <- makeContents t file
     req <- parseRequest "https://api.twitter.com/1.1/statuses/update.json"
     manager <- newManager tlsManagerSettings
     postReq <- signOAuth _oauth _credential $
@@ -109,11 +97,13 @@ tweet tw = do
     -- putStrLn $ show $ statusCode $ responseStatus res
     return ()
 
-makeContents tw = case img tw of
-    Nothing -> return [("status",encodeUtf8 . signAkari $ text tw)]
+makeContents t file = case file of
+    Nothing -> return [t']
     Just path -> do
         ids <- upload $ unpack path
-        return [("status",encodeUtf8 . signAkari $ text tw), ("media_ids", encodeUtf8 ids)]
+        return [t', ("media_ids", encodeUtf8 ids)]
+    where
+        t' = ("status",encodeUtf8 $ signAkari t)
 
 -- 画像をuploadし，"media_id_strings"フィールドの文字列を返す
 upload :: String -> IO Text

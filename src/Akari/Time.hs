@@ -36,12 +36,17 @@ type Month = Integer
 type Day = Integer
 data Date = Date Year Month Day Clock deriving Eq
 
+year (Date y _ _ _) = y
+month (Date _ m _ _) = m
+day (Date _ _ d _ ) = d
+clock (Date _ _ _ c) = c
+
 instance Show Date where
     show (Date y m d c) = show y ++ "-" ++ align 2 (show m) ++ "-" ++ align 2 (show d) ++ " " ++ show c
 
 dayCount :: Month -> Integer
 dayCount m
-    | elem m [1,3,5,7,8,20,12] = 31
+    | elem m [1,3,5,7,8,10,12] = 31
     | elem m [4,6,9,11] = 31
     | m == 2 = 28
 
