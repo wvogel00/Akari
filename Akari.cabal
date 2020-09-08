@@ -4,16 +4,16 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7b4e8cd78f9bbc38514b8769a390c3a543c7ce374ba872d32b810ec3f91e754d
+-- hash: 8d501937aa6f982fdbc118a3c3b8282c816ae5f0814637439f634e3c9685bd76
 
 name:           Akari
-version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/Akari#readme>
-homepage:       https://github.com/githubuser/Akari#readme
-bug-reports:    https://github.com/githubuser/Akari/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2020 Author name here
+version:        0.1.1.0
+description:    Please see the README on GitHub at <https://github.com/wvogel00/Akari#readme>
+homepage:       https://github.com/wvogel00/Akari#readme
+bug-reports:    https://github.com/wvogel00/Akari/issues
+author:         Wataru TORII
+maintainer:     wtorii@hey.com
+copyright:      2020 Wataru TORII
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
@@ -23,10 +23,11 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/Akari
+  location: https://github.com/wvogel00/Akari
 
 library
   exposed-modules:
+      Akari.Time
       Akari.Yaml
       Lib
   other-modules:
